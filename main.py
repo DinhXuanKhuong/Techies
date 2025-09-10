@@ -47,7 +47,7 @@ def predict_image(model, image_path, device):
     return predicted_label, probabilities
 
 if __name__ == "__main__":
-    model_path = 'Model/best_model.pth'  
+    model_path = 'Model/best_model_final.pth'  
     image_path = 'Test/dermoscopedia.org/scc3.png'  # path to image
     
     try:
