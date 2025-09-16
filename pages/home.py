@@ -27,7 +27,7 @@ st.markdown(
 
 st.divider()
 
-# --- GIAO DIỆN TRANG CHỦ ---
+# --- HOME PAGE ---
 
 
 if st.session_state.user_session is None:

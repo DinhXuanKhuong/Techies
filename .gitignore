@@ -1,4 +1,17 @@
 env/
 env38/
 .vscode/
-.env
+backend/.env
+
+
+# Virtual environment
+.venv/
+venv/
+.env/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
