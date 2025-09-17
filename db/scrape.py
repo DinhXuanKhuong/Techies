@@ -1,32 +1,49 @@
-from selenium.webdriver import Remote, ChromeOptions
-from selenium.webdriver.chromium.remote_connection import ChromiumRemoteConnection
-from selenium.webdriver.common.by import By
+# from selenium.webdriver import Remote, ChromeOptions
+# from selenium.webdriver.chromium.remote_connection import ChromiumRemoteConnection
+# from selenium.webdriver.common.by import By
+
+import selenium.webdriver as webdriver
+from selenium.webdriver.chrome.service import Service
+import time
+
 from bs4 import BeautifulSoup
 
-AUTH = 'brd-customer-hl_9d3a46d4-zone-agent_scraping:ynqowrx3a9x1'
-SBR_WEBDRIVER = f'https://{AUTH}@brd.superproxy.io:9515'
+# AUTH = 'brd-customer-hl_9d3a46d4-zone-agent_scraping:ynqowrx3a9x1'
+# SBR_WEBDRIVER = f'https://{AUTH}@brd.superproxy.io:9515'
 
 
 def scrape_website(website):
     print("Launching chrome browser...")
-    
-    sbr_connection = ChromiumRemoteConnection(SBR_WEBDRIVER, 'goog', 'chrome')
-    with Remote(sbr_connection, options=ChromeOptions()) as driver:
-        # print('Connected! Navigating...')
+
+    chrome_driver_path = 'db/chromedriver.exe'
+    options = webdriver.ChromeOptions()
+    driver = webdriver.Chrome(service=Service(chrome_driver_path), options=options)
+    try:
         driver.get(website)
-        # print('Taking page screenshot to file page.png')
-        # driver.get_screenshot_as_file('./page.png')
-        print('Navigated! Scraping page content...')
+        print("Page loaded")
         html = driver.page_source
-        # print(html)
+        time.sleep(5) 
         return html
+    finally:
+        driver.quit()
+    
+    # sbr_connection = ChromiumRemoteConnection(SBR_WEBDRIVER, 'goog', 'chrome')
+    # with Remote(sbr_connection, options=ChromeOptions()) as driver:
+    #     # print('Connected! Navigating...')
+    #     driver.get(website)
+    #     print('Navigated! Scraping page content...')
+    #     html = driver.page_source
+    #     # print(html)
+    #     return html
 
 def extract_body_content(html_content):
     soup = BeautifulSoup(html_content, "html.parser")
+    title = soup.find("title")
+    print(title.text if title else "No title found")
     body_content = soup.body
     if body_content:
-        return str(body_content)
-    return ""
+        return str(body_content), title.text
+    return "", ""
 
 def clean_body_content(body_content):
     soup = BeautifulSoup(body_content, "html.parser")

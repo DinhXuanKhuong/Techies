@@ -1,30 +1,45 @@
 from langchain_ollama import OllamaLLM
 from langchain_core.prompts import ChatPromptTemplate
+import chromadb
+from chromadb.utils import embedding_functions
 
 model = OllamaLLM(model="llama3.1")
 
-# template="Hãy phân tích nội dung sau:\n{dom_content}\n\nYêu cầu: {parse_description}"
+ollama_ef = embedding_functions.OllamaEmbeddingFunction(
+    model_name="nomic-embed-text"
+)
 
 template = """
 Bạn là một agent trả lời dựa trên dữ liệu sau:
 
-{dom_content}
+{context}
 
-Câu hỏi: {parse_description}
+Câu hỏi: {question}
 
 Yêu cầu: 
-- Nếu trong context có thông tin, hãy trả lời đúng y như vậy.
-- Nếu context không có, hãy trả lời: "Không tìm thấy thông tin trong cơ sở dữ liệu."
+- Nếu trong dom_content có thông tin, hãy trả lời đúng y như vậy.
+- Nếu dom_content không có, hãy trả lời: "Không tìm thấy thông tin trong cơ sở dữ liệu."
 - Tuyệt đối không bịa thêm.
 """
 
-def parse_with_ollama(dom_chunks, parse_description):
+def parse_with_ollama(question):
     prompt = ChatPromptTemplate.from_template(template)
+
+    chroma_client = chromadb.PersistentClient(path="./medical_db")
+    collection = chroma_client.get_or_create_collection(
+        name="medical",
+        embedding_function=ollama_ef
+    )
+
+    # chain = prompt | model
+    results = collection.query(query_texts=[question], n_results=3)
+    retrieved_docs = "\n".join(results["documents"][0]) if results["documents"] else ""
+
+    print(retrieved_docs)
     chain = prompt | model
-    parsed_results = []
+    response = chain.invoke({
+        "context": retrieved_docs, 
+        "question": question
+    })
 
-    for i, chunk in enumerate(dom_chunks, start=1):
-        response = chain.invoke({"dom_content": chunk, "parse_description": parse_description})
-        parsed_results.append(response)
-
-    return "\n".join(parsed_results)
+    return response
