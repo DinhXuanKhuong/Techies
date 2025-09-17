@@ -103,22 +103,23 @@ def load_data_to_chromaDB(url_file):
         vector_store = store_chunks_in_chroma(chunks, vector_store, title, url)
 
     return vector_store, titles
-# def main():
-vector_store, titles = load_data_to_chromaDB(url_file="db/data/url_data_test.csv")
-while True:
-    user_input = input("Enter your query (or 'exit' to quit): ")
-    if user_input.lower() == 'exit':
-        break
-    query = user_input
-    chunks = retrieve_relevant_chunks(vector_store, titles, query)
-    print("-------------------------------------------------------------------------------------")
-    print(f"Query: {query}")
-    print("-------------------------------------------------------------------------------------")
-    print("Top titles:")
-    for title in titles:
-        print(title)
-    print("--------------------------------------------------------------------------------------")
-    print("Top chunks:")
-    for chunk in chunks:
-        print(chunk.page_content)
-        print("-------------------------------------------------------------------------------------")  
+
+vector_store, titles = load_data_to_chromaDB(url_file="db/data/url_data.csv")
+# while True:
+# user_input = input("Enter your query (or 'exit' to quit): ")
+# if user_input.lower() == 'exit':
+#     break
+user_input = "Cách điều trị bệnh mụn nhọt là gì?"
+query = user_input
+chunks = retrieve_relevant_chunks(vector_store, titles, query)
+print("-------------------------------------------------------------------------------------")
+print(f"Query: {query}")
+print("-------------------------------------------------------------------------------------")
+print("Top titles:")
+for title in titles:
+    print(title)
+print("--------------------------------------------------------------------------------------")
+print("Top chunks:")
+for chunk in chunks:
+    print(chunk.page_content)
+    print("-------------------------------------------------------------------------------------")  
