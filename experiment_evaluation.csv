@@ -1,0 +1,55 @@
+"Bệnh thủy đậu là gì?", 0.2, 1.0, 1.0
+"Thủy đậu có lây không?", 0.1, 1.0, 0.3333333333333333
+"Bệnh thủy đậu là gì?", 0.2, 1.0, 1.0
+"Thủy đậu có lây không?", 0.1, 1.0, 0.3333333333333333
+"Triệu chứng của thủy đậu?", 0.3, 1.0, 0.5
+"Biến chứng của bệnh thủy đậu?", 0.3, 1.0, 1.0
+"Cách chữa thủy đậu?", 0.2, 1.0, 1.0
+"Bệnh thủy đậu là gì?", 0.2, 1.0, 1.0
+"Thủy đậu có lây không?", 0.1, 1.0, 0.3333333333333333
+"Triệu chứng của thủy đậu?", 0.3, 1.0, 0.5
+"Biến chứng của bệnh thủy đậu?", 0.3, 1.0, 0.5
+"Cách chữa thủy đậu?", 0.2, 1.0, 1.0
+"Cách phòng ngừa thủy đậu?", 0.2, 1.0, 1.0
+"Viêm mô tế bào là gì?", 0.0, 0.0, 0.0
+"Bệnh thủy đậu là gì?", 0.2, 1.0, 1.0
+"Thủy đậu có lây không?", 0.1, 1.0, 0.5
+"Triệu chứng của thủy đậu?", 0.3, 1.0, 0.5
+"Biến chứng của bệnh thủy đậu?", 0.3, 1.0, 0.5
+"Cách chữa thủy đậu?", 0.2, 1.0, 1.0
+"Cách phòng ngừa thủy đậu?", 0.2, 1.0, 1.0
+"Viêm mô tế bào là gì?", 0.1, 0.5, 0.3333333333333333
+"Triệu chứng viêm mô tế bào?", 0.1, 0.5, 1.0
+"Nguyên nhân viêm mô tế bào?", 0.1, 0.5, 0.3333333333333333
+"Điều trị viêm mô tế bào?", 0.5, 0.8333333333333334, 0.3333333333333333
+"Viêm mô tế bào có lây không?", 0.0, 0.0, 0.0
+"Yếu tố nguy cơ viêm mô tế bào?", 0.1, 0.5, 0.25
+"Phòng ngừa viêm mô tế bào?", 0.0, 0.0, 0.0
+"Bệnh chàm da (Eczema) là gì?", 0.2, 1.0, 1.0
+"Nguyên nhân gây chàm da?", 0.2, 1.0, 1.0
+"Biểu hiện của chàm da?", 0.2, 1.0, 1.0
+"Chẩn đoán chàm da?", 0.2, 1.0, 1.0
+"Điều trị bệnh chàm da?", 0.1, 0.3333333333333333, 0.3333333333333333
+"Phòng ngừa bệnh chàm da?", 0.3, 1.0, 0.5
+"Bệnh mề đay là gì?", 0.2, 1.0, 1.0
+"Triệu chứng của bệnh mề đay?", 0.2, 0.6666666666666666, 1.0
+"Nguyên nhân gây dị ứng nổi mề đay?", 0.3, 0.75, 1.0
+"Cách điều trị bệnh mề đay tại nhà?", 0.2, 1.0, 0.5
+"Chế độ sinh hoạt để hạn chế mề đay?", 0.1, 0.5, 0.5
+"Những vị trí và đối tượng dễ bị nổi mề đay?", 0.2, 1.0, 1.0
+"Điều trị mề đay mãn tính?", 0.2, 1.0, 1.0
+"Biến chứng của bệnh mề đay?", 0.0, 0.0, 0.0
+"Viêm da tiếp xúc là gì?", 0.1, 1.0, 1.0
+"Dịch tễ viêm da tiếp xúc?", 0.1, 1.0, 0.5
+"Nguyên nhân viêm da tiếp xúc?", 0.1, 0.5, 0.2
+"Triệu chứng viêm da tiếp xúc dị ứng?", 0.1, 1.0, 1.0
+"Cận lâm sàng viêm da tiếp xúc dị ứng?", 0.2, 1.0, 0.5
+"Chẩn đoán viêm da tiếp xúc dị ứng?", 0.1, 1.0, 0.1111111111111111
+"Triệu chứng viêm da tiếp xúc kích ứng?", 0.1, 1.0, 0.1
+"Cận lâm sàng viêm da tiếp xúc kích ứng?", 0.1, 1.0, 1.0
+"Chẩn đoán viêm da tiếp xúc kích ứng?", 0.1, 1.0, 1.0
+"Viêm da tiếp xúc dị ứng là gì?", 0.1, 1.0, 1.0
+"Nguyên nhân viêm da tiếp xúc dị ứng?", 0.1, 1.0, 1.0
+"Chẩn đoán viêm da tiếp xúc dị ứng?", 0.2, 0.6666666666666666, 0.2
+"Điều trị viêm da tiếp xúc dị ứng?", 0.1, 1.0, 1.0
+"Dự phòng viêm da tiếp xúc dị ứng?", 0.1, 1.0, 1.0
