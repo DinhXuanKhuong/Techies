@@ -606,7 +606,7 @@ export default function ChatPage() {
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 {selectedFile
                   ? `Đã chọn: ${selectedFile.name} • Nhấn Enter để gửi`
-                  : "Nhấn Enter để gửi, Shift + Enter để xuống dòng • Click + để thêm ảnh"
+                  : "Lưu ý: Câu trả lời từ chatbot sẽ không đúng 100% và không thể thay thế lời khuyên của bác sĩ"
                 }
               </p>
             </div>

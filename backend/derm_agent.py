@@ -2,6 +2,13 @@
 import os
 from dotenv import load_dotenv
 from typing import TypedDict, Dict, List, Optional
+
+
+
+
+from langchain_core.documents import Document
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field
 
 from langchain_openai import ChatOpenAI
@@ -14,50 +21,100 @@ import torch.nn as nn
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
 
-from anomaly import test_image
+from anomaly import test_image, Autoencoder
 from cv_tool import predict_image, load_model
-from rag import retrieve_relevant_chunks, load_titles_from_chroma, vector_store, titles
+from rag import retrieve_relevant_chunks, load_titles_from_chroma, vector_store, titles, retriever
 
 # ====== Load ENV ======
 load_dotenv()
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPENAI_API_KEY = os.getenv("OPENAI_KEY")
 
 # ====== Init LLM ======
+# llm = ChatOpenAI(
+#     temperature=0,
+#     api_key=OPENAI_API_KEY,
+#     model="meta-llama/llama-4-maverick:free",
+#     base_url="https://openrouter.ai/api/v1",
+#     max_tokens=3072
+# )
+
 llm = ChatOpenAI(
     temperature=0,
-    api_key=OPENAI_API_KEY,
-    model="qwen/qwen3-next-80b-a3b-thinking",
-    base_url="https://openrouter.ai/api/v1",
+    api_key=os.getenv("GROQ_API_KEY"),   # API key của Groq
+    model="meta-llama/llama-4-maverick-17b-128e-instruct",  # hoặc model khác từ Groq
+    base_url="https://api.groq.com/openai/v1",
     max_tokens=3072
 )
 
 # ====== Init models ======
-cv_model, cv_device = load_model('best_model_final.pth')
-anomaly_device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-anomaly_model = torch.load(
-    'autoencoder_skin.pth',
-    map_location=anomaly_device,
-    weights_only=False
-)
-anomaly_model.to(anomaly_device)
-anomaly_model.eval()
+# cv_model, cv_device = load_model('best_model_final.pth')
+# anomaly_device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+# anomaly_model = torch.load(
+#     'autoencoder_skin.pth',
+#     map_location=anomaly_device,
+#     weights_only=False
+# )
+# anomaly_model.to(anomaly_device)
+# anomaly_model.eval()
+#
+# criterion = nn.MSELoss()
+# threshold = 0.25
+# transform = A.Compose([
+#     A.Resize(height=224, width=224),
+#     A.Normalize(mean=[0.485, 0.456, 0.406],
+#                 std=[0.229, 0.224, 0.225]),
+#     ToTensorV2()
+# ])
 
-criterion = nn.MSELoss()
-threshold = 0.25
-transform = A.Compose([
-    A.Resize(height=224, width=224),
-    A.Normalize(mean=[0.485, 0.456, 0.406],
-                std=[0.229, 0.224, 0.225]),
-    ToTensorV2()
-])
+# ====== Init models ======
+cv_model, cv_device = load_model('best_model_final.pth')
+
+# Global variables để cache model
+_anomaly_model = None
+_anomaly_device = None
+_criterion = None
+_threshold = 0.25
+_transform = None
+
+
+def get_anomaly_model():
+    global _anomaly_model, _anomaly_device, _criterion, _transform
+    if _anomaly_model is None:
+        _anomaly_device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        _anomaly_model = torch.load(
+            'autoencoder_skin.pth',
+            map_location=_anomaly_device,
+            weights_only=False
+        )
+        _anomaly_model.to(_anomaly_device)
+        _anomaly_model.eval()
+
+        _criterion = nn.MSELoss()
+        _transform = A.Compose([
+            A.Resize(height=224, width=224),
+            A.Normalize(mean=[0.485, 0.456, 0.406],
+                        std=[0.229, 0.224, 0.225]),
+            ToTensorV2()
+        ])
+    return _anomaly_model, _anomaly_device, _criterion, _transform
 
 # ====== Tools ======
+# @tool
+# def anomaly_tool(image_path: str) -> dict:
+#     """Kiểm tra ảnh có phải tổn thương da không."""
+#     error, is_anomaly = test_image(
+#         anomaly_model, image_path, transform,
+#         criterion, anomaly_device, threshold
+#     )
+#     return {"reconstruction_error": error, "is_anomaly": is_anomaly}
+
 @tool
 def anomaly_tool(image_path: str) -> dict:
     """Kiểm tra ảnh có phải tổn thương da không."""
+    anomaly_model, anomaly_device, criterion, transform = get_anomaly_model()
     error, is_anomaly = test_image(
         anomaly_model, image_path, transform,
-        criterion, anomaly_device, threshold
+        criterion, anomaly_device, _threshold
     )
     return {"reconstruction_error": error, "is_anomaly": is_anomaly}
 
@@ -66,10 +123,20 @@ def cv_tool(image_path: str) -> dict:
     """Dự đoán bệnh từ ảnh da."""
     return predict_image(cv_model, image_path, cv_device)
 
+# @tool
+# def knowledge_retrieval_tool(query: str) -> List[str]:
+#     """Truy xuất thông tin y tế từ KB."""
+#     return retrieve_relevant_chunks(vector_store, titles, query, num_results=5)
+
+
+# Sửa lại tool để nó đơn giản hơn
 @tool
-def knowledge_retrieval_tool(query: str) -> List[str]:
+def knowledge_retrieval_tool(query: str) -> List[Document]:
     """Truy xuất thông tin y tế từ KB."""
-    return retrieve_relevant_chunks(vector_store, titles, query, num_results=5)
+    # Giờ đây chỉ cần gọi hàm mới
+    return retrieve_relevant_chunks(query)
+
+# ...
 
 # ====== State ======
 class DermState(TypedDict):
@@ -131,26 +198,8 @@ def validate_input(state: DermState) -> DermState:
         state["next_action"] = "router"
     return state
 
+
 def classify_topic(state: DermState) -> DermState:
-    # """
-    # Router: phân loại xem câu hỏi thuộc da liễu hay ngoài domain.
-    # - Nếu liên quan da liễu -> next_action = "planner"
-    # - Nếu không -> next_action = "other_topic"
-    # """
-    # query = state.get("user_input", "").lower()
-    # q = llm.invoke(
-    #     f"Người dùng hỏi: {query}\n"
-    #     "Câu hỏi này có liên quan đến da liễu (triệu chứng da, ảnh da, chăm sóc da) "
-    #     "hay hoàn toàn không liên quan?\n"
-    #     "Trả lời chỉ 'derm' hoặc 'other'."
-    # )
-    # answer = q.content.strip().lower()
-    # if "derm" in answer:
-    #     state["next_action"] = "planner"
-    # else:
-    #     state["next_action"] = "other_topic"
-    # print(f"[Router] Classified topic as: {state['next_action']}")
-    # return state
     """
     Phân tích toàn bộ input (ảnh + text):
     - Nếu ảnh hợp lệ hoặc text có mô tả triệu chứng -> derm
@@ -164,10 +213,33 @@ def classify_topic(state: DermState) -> DermState:
     text = (state.get("user_input") or "").strip()
     has_symptom_text = False
     if text:
+        # q = llm.invoke(
+        #     f"Câu sau đây có mô tả triệu chứng da liễu không (vị trí, thời gian, đau/ ngứa/ rát, lan rộng,...)?\n"
+        #     f"'{text}'\n"
+        #     "Trả lời chỉ 'yes' hoặc 'no'."
+        # )
         q = llm.invoke(
-            f"Câu sau đây có mô tả triệu chứng da liễu không (vị trí, thời gian, đau/ ngứa/ rát, lan rộng,...)?\n"
-            f"'{text}'\n"
-            "Trả lời chỉ 'yes' hoặc 'no'."
+            f"Bạn là một bộ phân loại triệu chứng da liễu.\n"
+            f"Nhiệm vụ: cho biết đoạn văn sau có MÔ TẢ TRIỆU CHỨNG DA LIỄU của một người hay không.\n\n"
+            f"Định nghĩa (để phân loại): 'mô tả triệu chứng da liễu' = bất kỳ thông tin nào mô tả trực tiếp tình trạng da của một người (hiện tại hoặc đã xảy ra hoặc người liên quan user bị) — bao gồm:\n"
+            f" - vị trí cơ thể (ví dụ: tay, chân, mặt, lưng,...),\n"
+            f" - dấu hiệu/triệu chứng cụ thể (ngứa, rát, đau, đỏ, nổi mẩn, sưng, bong tróc, chảy dịch, loét, vảy, lan rộng,...),\n"
+            f" - thời gian/diễn tiến (mới xuất hiện, kéo dài, nặng hơn, tái phát,...).\n"
+            f" - tiền sử của gia đình, người thân (ví dụ: 'Gia đình tôi có tiền sử viêm da.')\n\n"
+            f"Quy tắc rõ ràng:\n"
+            f" - Trả 'yes' nếu văn bản mô tả trực tiếp các dấu hiệu/triệu chứng hoặc diễn tiến liên quan đến DA (skin) của một người cụ thể (ví dụ: 'Tôi bị ngứa 2 ngày', 'Nổi mẩn ở cổ lan ra sau 1 tuần').\n"
+            f" - Trả 'no' nếu văn bản là: những điều về 'xin chào', tâm sự cuộc sống, nói chuyện không về y khoa, hoặc dùng nghĩa bóng/ẩn dụ ('ngứa tay' = muốn làm việc).\n"
+            f" - Mô tả triệu chứng trong quá khứ cho chính người nói (ví dụ 'Trước tôi từng bị nổi mẩn') vẫn tính là 'yes'.\n\n"
+            f"Ví dụ (ví dụ + đáp án):\n"
+            f" - 'Mặt em hôm nay bị đỏ và rát, rất ngứa.'  -> yes\n"
+            f" - 'Nếu da tôi ngứa thì phải làm sao?'         -> yes\n"
+            f" - 'Xin chào, hello bạn'                      -> no\n"
+            f" - 'Tôi buồn quá, ước gì có bạn tâm sự với tôi'     -> no\n"
+            f" - 'Tôi cảm thấy áp lực cuộc sống, gia đình đè nén lên tôi, tôi bị đau'     -> no\n"
+            f" - 'Tôi bị đau bụng                       '     -> no\n"
+            f" - 'Gia đình tôi có tiền sử viêm da.'          -> yes\n\n"
+            f"Văn bản: '{text}'\n"
+            f"CHỈ trả 'yes' hoặc 'no' (viết thường, không thêm lời giải thích hoặc ký tự khác)."
         )
         ans = q.content.strip().lower()
         print(f"[InputClassifier] Symptom text check answer: {ans}")
@@ -182,7 +254,6 @@ def classify_topic(state: DermState) -> DermState:
 
     print(f"[InputClassifier] image_valid={has_valid_image}, symptom_text={has_symptom_text} -> {state['next_action']}")
     return state
-
 
 # ====== Other Topic Node ======
 def other_topic_answer(state: DermState) -> DermState:
@@ -202,31 +273,22 @@ def other_topic_answer(state: DermState) -> DermState:
     return state
 
 # ====== Planner Node ======
+
+
+
 def orchestrator_plan(state: DermState) -> DermState:
     """
-    Phân loại query của user và xác định plan xử lý dựa trên trạng thái hiện tại:
-
-    2. Lập kế hoạch (plan) dựa trên kết quả validate:
-    - Nếu có ảnh hợp lệ:
-        + Luôn chạy bước cv_inference.
-        + Nếu chưa có triệu chứng từ user -> thêm bước llm_ask_symptom để hỏi tiếp.
-        + Sau đó chạy symptom_matching -> llm_reasoning -> llm_answer.
-    - Nếu có ảnh nhưng không hợp lệ:
-        + Nếu user có triệu chứng -> bỏ qua cv_inference, chỉ dùng symptom_matching -> llm_reasoning -> llm_answer.
-        + Nếu không có triệu chứng -> trả lời yêu cầu user gửi ảnh khác hoặc mô tả triệu chứng -> END.
-    - Nếu không có ảnh:
-        + Nếu có triệu chứng -> plan gồm symptom_matching -> llm_reasoning -> llm_answer.
-        + Nếu không có triệu chứng -> trả lời giới thiệu bản thân,  và yêu cầu cung cấp ảnh hoặc triệu chứng để biết thêm → END.
+    Phân loại query của user và xác định plan xử lý dựa trên trạng thái hiện tại.
     """
     plan = []
     img = state.get("image")
-    anomaly = state.get("anomaly_check")
-    other_topic = state.get("other_topic", False)
+    # BỎ DÒNG NÀY: other_topic = state.get("other_topic", False)
+
     # determine image_valid: anomaly exists and is False
     image_valid = False
     if img:
+        anomaly = state.get("anomaly_check")
         if anomaly is None:
-            # (cần thiết validate luôn chạy trước nên anomaly thường không None)
             image_valid = True
         else:
             image_valid = not anomaly.get("is_anomaly", True)
@@ -235,29 +297,29 @@ def orchestrator_plan(state: DermState) -> DermState:
         # hình hợp lệ -> dùng CV rồi hỏi thêm triệu chứng nếu cần
         plan = [
             "cv_inference",
-            "llm_ask_symptom",      # có thể dừng chờ user nếu LLM hỏi
+            "llm_ask_symptom",
+            "symptom_matching",
+            "llm_reasoning",
+            "llm_answer"
+        ]
+    # SỬA LOGIC Ở ĐÂY
+    # Nếu không có ảnh hợp lệ, NHƯNG có input text (và đã vượt qua router)
+    # thì chạy plan cho text.
+    elif state.get("user_input"):
+        plan = [
             "symptom_matching",
             "llm_reasoning",
             "llm_answer"
         ]
     else:
-        # không có ảnh hợp lệ
-        if state.get("symptoms") and other_topic is False:
-            plan = [
-                "symptom_matching",
-                "llm_reasoning",
-                "llm_answer"
-            ]
-        else:
-            # không có gì -> planner trả về rỗng; validate đã đặt next_action=end
-            plan = []
+        # Các trường hợp còn lại (không có ảnh, không có text) -> plan rỗng
+        plan = []
 
     print(f"[Planner] Generated plan: {plan}")
     state["visited_actions"] = []
     state["plan"] = plan
     state["plan_index"] = 0
     return state
-
 
 # ====== Executor Node ======
 def executor(state: DermState) -> DermState:
@@ -319,22 +381,38 @@ def llm_ask_symptom(state: DermState) -> DermState:
         state["next_action"] = "executor"  # sẽ được dùng trong conditional edges
     return state
 
+# def symptom_matching(state: DermState) -> DermState:
+#     if state.get("symptoms") or (state.get("user_input") and not state.get("other_topic", False)):
+#         init_query = state.get("symptoms") or state.get("user_input")
+#         query = init_query
+#         if state['cv_results']:
+#         #     # sắp xếp theo value giảm dần
+#         #     top4 = sorted(state['cv_results'].items(), key=lambda x: x[1], reverse=True)[:4]
+#         #     # lấy danh sách 4 key
+#         #     top4_keys = [k for k, v in top4]
+#         # for key in top4_keys:
+#         #     query = init_query + f", {key}"
+#         #     state["rag_docs"].append(knowledge_retrieval_tool(str(query)))
+#         #     query = init_query
+#             query = init_query + max(state["cv_results"], key=state["cv_results"].get)
+#         state["rag_docs"] = knowledge_retrieval_tool.invoke(str(query))
+#         print(f"[Symptom Matching] Retrieved {state['rag_docs']} docs for query: {query}")
+#     else:
+#         state["rag_docs"] = []
+#     return state
+
 def symptom_matching(state: DermState) -> DermState:
     if state.get("symptoms") or (state.get("user_input") and not state.get("other_topic", False)):
         init_query = state.get("symptoms") or state.get("user_input")
-        query = init_query
-        if state['cv_results']:
-        #     # sắp xếp theo value giảm dần
-        #     top4 = sorted(state['cv_results'].items(), key=lambda x: x[1], reverse=True)[:4]
-        #     # lấy danh sách 4 key
-        #     top4_keys = [k for k, v in top4]
-        # for key in top4_keys:
-        #     query = init_query + f", {key}"
-        #     state["rag_docs"].append(knowledge_retrieval_tool(str(query)))
-        #     query = init_query
-            query = init_query + max(state["cv_results"], key=state["cv_results"].get)
-        state["rag_docs"] = knowledge_retrieval_tool.invoke(str(query))
-        print(f"[Symptom Matching] Retrieved {state['rag_docs']} docs for query: {query}")
+        query = str(init_query)  # Chuyển thành chuỗi
+        if state.get('cv_results'):
+            # Thay vì cộng chuỗi, chúng ta có thể làm query phức tạp hơn sau này
+            # Nhưng hiện tại, chỉ cần query gốc là đủ tốt
+            pass
+
+        # Chỉ cần gọi tool với query
+        state["rag_docs"] = knowledge_retrieval_tool.invoke(query)
+        print(f"[Symptom Matching] Retrieved {len(state.get('rag_docs', []))} docs for query: {query}")
     else:
         state["rag_docs"] = []
     return state
@@ -347,48 +425,112 @@ def llm_reasoning(state: DermState) -> DermState:
     - Tài liệu RAG: {state.get('rag_docs')}
     Nhiệm vụ: chọn bệnh phù hợp nhất và giải thích ngắn gọn.
     """
-    # demo trả giá trị giả (ở production bạn nên gọi reasoner.invoke)
-    result = reasoner.invoke(prompt)
-    state["final_diagnosis"] = result.diagnosis
-    state["reasoning"] = result.reasoning
-    # state["final_diagnosis"] = "bệnh mẫu (demo)"
-    # state["reasoning"] = "vì triệu chứng phù hợp và kết quả tham khảo"
+    # # demo trả giá trị giả (ở production bạn nên gọi reasoner.invoke)
+    # result = reasoner.invoke(prompt)
+    # state["final_diagnosis"] = result.diagnosis
+    # state["reasoning"] = result.reasoning
+    # # state["final_diagnosis"] = "bệnh mẫu (demo)"
+    # # state["reasoning"] = "vì triệu chứng phù hợp và kết quả tham khảo"
+    # return state
+
+    try:
+        result = reasoner.invoke(prompt)
+        state["final_diagnosis"] = result.diagnosis
+        state["reasoning"] = result.reasoning
+    except Exception as e:
+        print(f"[LLM Reasoning] Error parsing structured output: {e}")
+        # Cung cấp một giá trị dự phòng để graph có thể tiếp tục
+        state["final_diagnosis"] = "Không thể xác định"
+        state["reasoning"] = ("Đã có lỗi xảy ra trong quá trình phân tích chẩn đoán. "
+                              "Thông tin đầu vào có thể chưa đủ hoặc không rõ ràng.")
+
     return state
+
+
+# def llm_answer(state: DermState) -> DermState:
+#     """
+#     Luôn là bước kết thúc: trả lời tự nhiên cho bệnh nhân.
+#     Sau khi thực hiện node này, luồng sẽ đi tới END.
+#     """
+#     # result = llm.invoke(f"""
+#     # Với chẩn đoán: {state.get('final_diagnosis')}
+#     # Lý do: {state.get('reasoning')}
+#     # Viết câu trả lời tự nhiên cho bệnh nhân:
+#     # - Giải thích bệnh
+#     # - Triệu chứng điển hình
+#     # - Gợi ý chăm sóc ban đầu
+#     # - Nhắc đi khám nếu cần
+#     # """)
+#     prompt=f"""
+#     # Với chẩn đoán: {state.get('final_diagnosis')}
+#     # Lý do: {state.get('reasoning')}
+#     # Viết câu trả lời tự nhiên cho bệnh nhân:
+#     # - Giải thích bệnh
+#     # - Triệu chứng điển hình
+#     # - Gợi ý chăm sóc ban đầu
+#     # - Nhắc đi khám nếu cần
+#     # """
+#     # state["answer"] = result.content
+#     result = llm.invoke(prompt)
+#     print("DEBUG LLM ANSWER RAW:", result)          # <== thêm dòng này
+#     print("DEBUG LLM ANSWER CONTENT:", result.content if hasattr(result, "content") else None)
+#
+#     # fallback
+#     if hasattr(result, "content") and result.content:
+#         state["answer"] = result.content
+#     else:
+#         state["answer"] = str(result)   # fallback nếu content rỗng
+#     # state["awaiting_input"] = False
+#     state["next_action"] = "end"
+#     return state
+
 
 def llm_answer(state: DermState) -> DermState:
     """
-    Luôn là bước kết thúc: trả lời tự nhiên cho bệnh nhân.
-    Sau khi thực hiện node này, luồng sẽ đi tới END.
+    Luôn là bước kết thúc: trả lời tự nhiên cho bệnh nhân,
+    BẮT BUỘC phải dựa trên thông tin từ RAG.
     """
-    # result = llm.invoke(f"""
-    # Với chẩn đoán: {state.get('final_diagnosis')}
-    # Lý do: {state.get('reasoning')}
-    # Viết câu trả lời tự nhiên cho bệnh nhân:
-    # - Giải thích bệnh
-    # - Triệu chứng điển hình
-    # - Gợi ý chăm sóc ban đầu
-    # - Nhắc đi khám nếu cần
-    # """)
-    prompt=f"""
-    # Với chẩn đoán: {state.get('final_diagnosis')}
-    # Lý do: {state.get('reasoning')}
-    # Viết câu trả lời tự nhiên cho bệnh nhân:
-    # - Giải thích bệnh
-    # - Triệu chứng điển hình
-    # - Gợi ý chăm sóc ban đầu
-    # - Nhắc đi khám nếu cần
-    # """
-    # state["answer"] = result.content
-    result = llm.invoke(prompt)
-    print("DEBUG LLM ANSWER RAW:", result)          # <== thêm dòng này
-    print("DEBUG LLM ANSWER CONTENT:", result.content if hasattr(result, "content") else None)
+    # Chuyển đổi list các Document thành một chuỗi context
+    context_str = "\n\n---\n\n".join(
+        [doc.page_content for doc in state.get('rag_docs', [])]
+    )
 
-    # fallback
+    # Sửa lại prompt để "ground" câu trả lời vào context
+    prompt_template = """Bạn là một trợ lý y tế chuyên về da liễu.
+    Nhiệm vụ của bạn là trả lời câu hỏi của người dùng một cách an toàn và chính xác, DỰA HOÀN TOÀN vào các tài liệu được cung cấp dưới đây.
+
+    **QUY TẮC TUYỆT ĐỐI:**
+    - KHÔNG được bịa đặt thông tin.
+    - KHÔNG sử dụng kiến thức bên ngoài các tài liệu được cung cấp.
+    - Nếu các tài liệu không chứa đủ thông tin để trả lời, hãy nói rằng "Dựa trên thông tin hiện có, tôi chưa thể kết luận chắc chắn về vấn đề này."
+
+    **Tài liệu tham khảo (Context):**
+    {context}
+
+    **Chẩn đoán sơ bộ từ bước trước (để tham khảo):**
+    - Chẩn đoán: {diagnosis}
+    - Lý do: {reasoning}
+
+    **Câu hỏi của người dùng:**
+    {user_input}
+
+    Dựa vào các quy tắc và thông tin trên, hãy viết một câu trả lời hoàn chỉnh, tự nhiên và thân thiện cho người dùng, bao gồm các gợi ý chăm sóc và nhấn mạnh việc cần đi khám bác sĩ.
+    """
+
+    prompt = prompt_template.format(
+        context=context_str if context_str else "Không có tài liệu tham khảo.",
+        diagnosis=state.get('final_diagnosis', 'Chưa xác định'),
+        reasoning=state.get('reasoning', 'Không có'),
+        user_input=state.get('user_input', '')
+    )
+
+    result = llm.invoke(prompt)
+
     if hasattr(result, "content") and result.content:
         state["answer"] = result.content
     else:
-        state["answer"] = str(result)   # fallback nếu content rỗng
-    # state["awaiting_input"] = False
+        state["answer"] = str(result)
+
     state["next_action"] = "end"
     return state
 
@@ -513,3 +655,35 @@ async def run_derm_graph(user_question: str, image_url: str = None):
 #     print("\n=== Step ===")
 #     for k, v in event.items():
 #         print(f"{k}: {v}")
+
+if __name__ == "__main__":
+    import asyncio
+
+    # Ví dụ chạy thử khi thực thi file trực tiếp
+    async def main():
+        # Test case 1: Có ảnh và triệu chứng
+        print("--- Running Test Case 1: Image and Symptoms ---")
+        answer1 = await run_derm_graph(
+            user_question="Da của tôi bị nổi mẩn đỏ và rất ngứa ở vùng cánh tay.",
+            image_url="img/image.png"  # Thay bằng đường dẫn ảnh thật để test
+        )
+        print("\nFinal Answer 1:", answer1)
+
+        # Test case 2: Chỉ có triệu chứng
+        print("\n--- Running Test Case 2: Symptoms Only ---")
+        answer2 = await run_derm_graph(
+            user_question="Tôi bị ngứa ở da đầu và có vảy trắng.",
+            image_url=None
+        )
+        print("\nFinal Answer 2:", answer2)
+
+        # Test case 3: Hỏi ngoài chủ đề
+        print("\n--- Running Test Case 3: Off-topic Question ---")
+        answer3 = await run_derm_graph(
+            user_question="Thủ đô của Việt Nam là gì?",
+            image_url=None
+        )
+        print("\nFinal Answer 3:", answer3)
+
+    # Chạy hàm main bất đồng bộ
+    asyncio.run(main())

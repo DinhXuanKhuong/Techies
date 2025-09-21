@@ -1,12 +1,9 @@
 import os
-import requests
-from jose import jwt
-from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer
+
 from dotenv import load_dotenv
+from fastapi import Depends, HTTPException
+from fastapi.security import HTTPBearer
 from supabase import create_client, Client
-
-
 
 load_dotenv()
 

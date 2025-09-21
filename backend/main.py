@@ -1,15 +1,14 @@
-import os
-from fastapi import FastAPI, BackgroundTasks, Depends, HTTPException, File, UploadFile, Form
-from fastapi.responses import StreamingResponse
-from fastapi.middleware.cors import CORSMiddleware
-from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
-from supabase import create_client, Client
-from auth import get_current_user, supabase
-from pydantic import BaseModel
-from typing import List
-from datetime import datetime
 import uuid
+from datetime import datetime
+from typing import List
 
+from fastapi import FastAPI, BackgroundTasks, Depends, HTTPException, File, UploadFile, Form
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
+from langchain_core.messages import HumanMessage, AIMessage
+from pydantic import BaseModel
+
+from auth import get_current_user, supabase
 # ✅ Gọi graph từ file derm_graph.py
 from derm_agent import run_derm_graph
 
@@ -146,6 +145,7 @@ async def chat(
     # ===== Gọi graph xử lý thay vì gọi ChatOpenAI =====
     accumulated = []
 
+
     async def generate():
         try:
             result = await run_derm_graph(q, image_url)  # gọi graph
@@ -160,7 +160,7 @@ async def chat(
                 {"user_id": user_id, "session_id": session_id, "role": "user", "content": q, "image_url": image_url},
                 {"user_id": user_id, "session_id": session_id, "role": "assistant", "content": "".join(accumulated)},
             ]).execute()
-            update_or_create_session(user_id, session_id, q if len(accumulated) == 0 else None)
+            update_or_create_session(user_id, session_id, q)
         except Exception as e:
             print(f"Error saving to DB: {e}")
 

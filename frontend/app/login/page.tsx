@@ -46,7 +46,7 @@ export default function LoginPage() {
       </div>
       <div className="bg-muted relative hidden lg:block">
         <img
-          src="https://images.pexels.com/photos/159211/headache-pain-pills-medication-159211.jpeg?cs=srgb&dl=pexels-pixabay-159211.jpg&fm=jpg"
+          src="https://qezsedgptmntyjrfkqbl.supabase.co/storage/v1/object/public/chat-files/chat_uploads/16334676_Tiny%20dermatologists%20examining%20skin%20of%20patient%20at%20hospital.jpg"
           alt="Image"
           className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
         />
