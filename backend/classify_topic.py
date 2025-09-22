@@ -17,8 +17,7 @@ def load_phobert_model(model_path="./Fine-tuned_PhoBERT", device="mps"):
         tuple: (model, tokenizer, device) - Mô hình, tokenizer và thiết bị đã khởi tạo.
     """
     # Chọn thiết bị
-    device = torch.device(device if torch.backends.mps.is_available() else "cpu")
-    
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
     # Tải tokenizer và mô hình
     tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=False)
     model = AutoModelForSequenceClassification.from_pretrained(model_path).to(device)

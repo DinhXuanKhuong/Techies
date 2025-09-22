@@ -60,10 +60,14 @@ export default function HomePage() {
       <div className="flex flex-col gap-4 p-6 md:p-10">
         <div className="flex justify-center gap-2 md:justify-start">
           <a href="#" className="flex items-center gap-2 font-medium">
-            <div className="bg-primary text-primary-foreground flex size-6 items-center justify-center rounded-md">
-              <GalleryVerticalEnd className="size-4" />
-            </div>
-            DefmAI
+
+              <div className="text-primary-foreground flex size-16  items-center justify-center rounded-md overflow-hidden">
+                <img
+                  src="https://qezsedgptmntyjrfkqbl.supabase.co/storage/v1/object/public/chat-files/chat_uploads/551884845_6072882859625357_7744008671031620226_n.png"
+                  alt="Logo"
+                  className="h-full w-full object-cover"
+                />
+              </div>
           </a>
         </div>
         <div className="flex flex-1 items-center justify-center">
@@ -92,3 +96,4 @@ export default function HomePage() {
     </div>
   )
 }
+

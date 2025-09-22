@@ -444,14 +444,21 @@ export default function ChatPage() {
           <div className="max-w-4xl mx-auto space-y-6">
             {messages.length === 0 && (
               <div className="text-center py-12">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-r from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 mb-4">
-                  <Bot className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-                </div>
+                {/*<div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-r from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 mb-4">*/}
+                {/*  <Bot className="w-8 h-8 text-blue-600 dark:text-blue-400" />*/}
+                {/*</div>*/}
+                  <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-gradient-to-r from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 mb-4 overflow-hidden">
+                      <img
+                        src="https://qezsedgptmntyjrfkqbl.supabase.co/storage/v1/object/public/chat-files/chat_uploads/551884845_6072882859625357_7744008671031620226_n.png"
+                        alt="Logo"
+                        className="w-14 h-14  object-contain"
+                      />
+                  </div>
                 <h3 className="text-lg font-medium text-slate-800 dark:text-slate-200 mb-2">
-                  Chào bạn! 👋
+                  Chào bạn👋! Tôi là một chatbot chuyên về da liễu, tôi có thể chẩn đoán bệnh và đưa ra lời khuyên phù hợp với bạn
                 </h3>
                 <p className="text-slate-600 dark:text-slate-400">
-                  Hãy bắt đầu cuộc trò chuyện bằng cách gửi tin nhắn của bạn.
+                  Hãy bắt đầu cuộc trò chuyện bằng cách gửi tin nhắn của bạn. Lưu ý: Câu trả lời của chatbot chỉ để tham khảo và không có tác dụng thay thế lời khuyên của bác sĩ và chuyên gia.
                 </p>
               </div>
             )}
