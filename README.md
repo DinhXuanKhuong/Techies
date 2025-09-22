@@ -29,7 +29,46 @@ python -m venv env
 pip install -r requirements.txt
 ```
 
-### 4. Chạy chương trình backend
+### 4. Cấu hình biến môi trường(Nếu clone repo qua Github hoặc chưa có sẵn các file .env và .env.local)
+
+Chương trình cần các biến môi trường để kết nối với dịch vụ bên ngoài.  
+Repo có sẵn các file mẫu:  
+
+- `backend/.env.example`
+- `frontend/.env.local.example`
+
+#### Backend
+Trong thư mục `backend`, tạo file `.env` dựa trên `.env.example`:  
+
+```powershell
+cd backend
+cp .env.example .env
+```
+Nội dung tối thiểu của .env
+```powershell
+SUPABASE_URL=your_supabase_url
+SUPABASE_KEY=your_supabase_key
+OPENAI_KEY=your_openai_key
+GROQ_API_KEY=your_groq_api_key
+LANGCHAIN_API_KEY=your_langchain_key
+LANGCHAIN_TRACING_V2=true
+LANGCHAIN_PROJECT=derm-agent
+```
+
+
+#### Frontend 
+Trong thư mục `frontend`, tạo file `.env.local` dựa trên `.env.local.example`:
+
+```powershell
+cd frontend
+cp .env.local.example .env.local
+```
+Nội dung tối thiểu của .env
+```powershell
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key
+```
+### 5. Chạy chương trình backend
 
 ```powershell
 cd backend
@@ -39,7 +78,7 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
 
 ---
-### 5. Chạy web frontend 
+### 6. Chạy web frontend 
 
 ```powershell
 cd frontend
