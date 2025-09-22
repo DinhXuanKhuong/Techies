@@ -24,27 +24,28 @@ from albumentations.pytorch import ToTensorV2
 from anomaly import test_image, Autoencoder
 from cv_tool import predict_image, load_model
 from rag import retrieve_relevant_chunks, load_titles_from_chroma, vector_store, titles, retriever
+from classify_topic import load_phobert_model, predict_label
 
 # ====== Load ENV ======
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_KEY")
 
 # ====== Init LLM ======
-# llm = ChatOpenAI(
-#     temperature=0,
-#     api_key=OPENAI_API_KEY,
-#     model="meta-llama/llama-4-maverick:free",
-#     base_url="https://openrouter.ai/api/v1",
-#     max_tokens=3072
-# )
-
 llm = ChatOpenAI(
     temperature=0,
-    api_key=os.getenv("GROQ_API_KEY"),   # API key của Groq
-    model="meta-llama/llama-4-maverick-17b-128e-instruct",  # hoặc model khác từ Groq
-    base_url="https://api.groq.com/openai/v1",
+    api_key=OPENAI_API_KEY,
+    model="meta-llama/llama-4-maverick:free",
+    base_url="https://openrouter.ai/api/v1",
     max_tokens=3072
 )
+
+# llm = ChatOpenAI(
+#     temperature=0,
+#     api_key=os.getenv("GROQ_API_KEY"),   # API key của Groq
+#     model="meta-llama/llama-4-maverick-17b-128e-instruct",  # hoặc model khác từ Groq
+#     base_url="https://api.groq.com/openai/v1",
+#     max_tokens=3072
+# )
 
 # ====== Init models ======
 # cv_model, cv_device = load_model('best_model_final.pth')
@@ -68,6 +69,7 @@ llm = ChatOpenAI(
 
 # ====== Init models ======
 cv_model, cv_device = load_model('best_model_final.pth')
+phobert_model, phobert_tokenizer, phobert_device = load_phobert_model("./Fine-tuned_PhoBERT", device="mps")
 
 # Global variables để cache model
 _anomaly_model = None
@@ -117,6 +119,11 @@ def anomaly_tool(image_path: str) -> dict:
         criterion, anomaly_device, _threshold
     )
     return {"reconstruction_error": error, "is_anomaly": is_anomaly}
+
+@tool
+def classify_tool(query: str) -> str:
+    """Phân loại query có liên quan y khoa hay không hay không."""
+    return predict_label(query, phobert_model, phobert_tokenizer, phobert_device)
 
 @tool
 def cv_tool(image_path: str) -> dict:
@@ -218,32 +225,32 @@ def classify_topic(state: DermState) -> DermState:
         #     f"'{text}'\n"
         #     "Trả lời chỉ 'yes' hoặc 'no'."
         # )
-        q = llm.invoke(
-            f"Bạn là một bộ phân loại triệu chứng da liễu.\n"
-            f"Nhiệm vụ: cho biết đoạn văn sau có MÔ TẢ TRIỆU CHỨNG DA LIỄU của một người hay không.\n\n"
-            f"Định nghĩa (để phân loại): 'mô tả triệu chứng da liễu' = bất kỳ thông tin nào mô tả trực tiếp tình trạng da của một người (hiện tại hoặc đã xảy ra hoặc người liên quan user bị) — bao gồm:\n"
-            f" - vị trí cơ thể (ví dụ: tay, chân, mặt, lưng,...),\n"
-            f" - dấu hiệu/triệu chứng cụ thể (ngứa, rát, đau, đỏ, nổi mẩn, sưng, bong tróc, chảy dịch, loét, vảy, lan rộng,...),\n"
-            f" - thời gian/diễn tiến (mới xuất hiện, kéo dài, nặng hơn, tái phát,...).\n"
-            f" - tiền sử của gia đình, người thân (ví dụ: 'Gia đình tôi có tiền sử viêm da.')\n\n"
-            f"Quy tắc rõ ràng:\n"
-            f" - Trả 'yes' nếu văn bản mô tả trực tiếp các dấu hiệu/triệu chứng hoặc diễn tiến liên quan đến DA (skin) của một người cụ thể (ví dụ: 'Tôi bị ngứa 2 ngày', 'Nổi mẩn ở cổ lan ra sau 1 tuần').\n"
-            f" - Trả 'no' nếu văn bản là: những điều về 'xin chào', tâm sự cuộc sống, nói chuyện không về y khoa, hoặc dùng nghĩa bóng/ẩn dụ ('ngứa tay' = muốn làm việc).\n"
-            f" - Mô tả triệu chứng trong quá khứ cho chính người nói (ví dụ 'Trước tôi từng bị nổi mẩn') vẫn tính là 'yes'.\n\n"
-            f"Ví dụ (ví dụ + đáp án):\n"
-            f" - 'Mặt em hôm nay bị đỏ và rát, rất ngứa.'  -> yes\n"
-            f" - 'Nếu da tôi ngứa thì phải làm sao?'         -> yes\n"
-            f" - 'Xin chào, hello bạn'                      -> no\n"
-            f" - 'Tôi buồn quá, ước gì có bạn tâm sự với tôi'     -> no\n"
-            f" - 'Tôi cảm thấy áp lực cuộc sống, gia đình đè nén lên tôi, tôi bị đau'     -> no\n"
-            f" - 'Tôi bị đau bụng                       '     -> no\n"
-            f" - 'Gia đình tôi có tiền sử viêm da.'          -> yes\n\n"
-            f"Văn bản: '{text}'\n"
-            f"CHỈ trả 'yes' hoặc 'no' (viết thường, không thêm lời giải thích hoặc ký tự khác)."
-        )
-        ans = q.content.strip().lower()
+        # q = llm.invoke(
+        #     f"Bạn là một bộ phân loại triệu chứng da liễu.\n"
+        #     f"Nhiệm vụ: cho biết đoạn văn sau có MÔ TẢ TRIỆU CHỨNG DA LIỄU của một người hay không.\n\n"
+        #     f"Định nghĩa (để phân loại): 'mô tả triệu chứng da liễu' = bất kỳ thông tin nào mô tả trực tiếp tình trạng da của một người (hiện tại hoặc đã xảy ra hoặc người liên quan user bị) — bao gồm:\n"
+        #     f" - vị trí cơ thể (ví dụ: tay, chân, mặt, lưng,...),\n"
+        #     f" - dấu hiệu/triệu chứng cụ thể (ngứa, rát, đau, đỏ, nổi mẩn, sưng, bong tróc, chảy dịch, loét, vảy, lan rộng,...),\n"
+        #     f" - thời gian/diễn tiến (mới xuất hiện, kéo dài, nặng hơn, tái phát,...).\n"
+        #     f" - tiền sử của gia đình, người thân (ví dụ: 'Gia đình tôi có tiền sử viêm da.')\n\n"
+        #     f"Quy tắc rõ ràng:\n"
+        #     f" - Trả 'yes' nếu văn bản mô tả trực tiếp các dấu hiệu/triệu chứng hoặc diễn tiến liên quan đến DA (skin) của một người cụ thể (ví dụ: 'Tôi bị ngứa 2 ngày', 'Nổi mẩn ở cổ lan ra sau 1 tuần').\n"
+        #     f" - Trả 'no' nếu văn bản là: những điều về 'xin chào', tâm sự cuộc sống, nói chuyện không về y khoa, hoặc dùng nghĩa bóng/ẩn dụ ('ngứa tay' = muốn làm việc).\n"
+        #     f" - Mô tả triệu chứng trong quá khứ cho chính người nói (ví dụ 'Trước tôi từng bị nổi mẩn') vẫn tính là 'yes'.\n\n"
+        #     f"Ví dụ (ví dụ + đáp án):\n"
+        #     f" - 'Mặt em hôm nay bị đỏ và rát, rất ngứa.'  -> yes\n"
+        #     f" - 'Nếu da tôi ngứa thì phải làm sao?'         -> yes\n"
+        #     f" - 'Xin chào, hello bạn'                      -> no\n"
+        #     f" - 'Tôi buồn quá, ước gì có bạn tâm sự với tôi'     -> no\n"
+        #     f" - 'Tôi cảm thấy áp lực cuộc sống, gia đình đè nén lên tôi, tôi bị đau'     -> no\n"
+        #     f" - 'Tôi bị đau bụng                       '     -> no\n"
+        #     f" - 'Gia đình tôi có tiền sử viêm da.'          -> yes\n\n"
+        #     f"Văn bản: '{text}'\n"
+        #     f"CHỈ trả 'yes' hoặc 'no' (viết thường, không thêm lời giải thích hoặc ký tự khác)."
+        # )
+        ans = classify_tool.invoke(text)
         print(f"[InputClassifier] Symptom text check answer: {ans}")
-        has_symptom_text = "yes" in ans
+        has_symptom_text = False if "khac" == ans else True
         state['other_topic'] = not has_symptom_text
 
     # --- Gộp kết quả ---
