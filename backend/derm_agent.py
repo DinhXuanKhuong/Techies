@@ -511,7 +511,7 @@ async def run_derm_graph(user_question: str, image_url: str = None, chat_history
 
     # Chạy graph và trả về toàn bộ state cuối cùng
     result_state = await graph.ainvoke(initial_state)
-    # Trả về một dictionary để main.py có thể lấy cả answer và rag_docs
+    # Trả về một dictionary để có thể lấy cả answer và rag_docs
     return {
         "answer": result_state.get("answer"),
         "rag_docs": result_state.get("rag_docs")

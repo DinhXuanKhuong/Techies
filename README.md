@@ -2,6 +2,12 @@
 
 ## Hướng dẫn cài đặt và chạy chương trình
 
+### Yêu cầu
+Python ≥ 3.10.x (cho backend)
+
+Node.js ≥ 18.x + npm (cho frontend)
+
+Git LFS (nếu clone repo từ github)
 ### 1. Tạo môi trường ảo (Windows)
 
 Mở PowerShell hoặc Command Prompt và chạy lệnh sau:
@@ -13,16 +19,17 @@ python -m venv env
 ### 2. Kích hoạt môi trường ảo
 
 ```cmd
-.\env\Scripts\activate
+.\.venv\Scripts\activate
+(Linux/macOS thì dùng: source .venv/bin/activate)
 ```
 
-### 3. Cài đặt các thư viện cần thiết
+### 3. Cài đặt các thư viện Python cần thiết
 
 ```powershell
 pip install -r requirements.txt
 ```
 
-### 4. Chạy chương trình dự đoán
+### 4. Chạy chương trình backend
 
 ```powershell
 cd backend
@@ -30,12 +37,9 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
 ```
 
-### 5. Thay đổi đường dẫn ảnh hoặc mô hình (nếu cần)
-
-- Sửa các biến `model_path` và `image_path` trong file `main.py` để phù hợp với dữ liệu nhập vào.
 
 ---
-### 6. Chạy web frontend 
+### 5. Chạy web frontend 
 
 ```powershell
 cd frontend
@@ -44,9 +48,8 @@ npm run dev
 ```
 **Lưu ý:**
 
-- Python 3.10.x. `x` nào cũng được.
 - Nếu gặp lỗi thiếu thư viện, kiểm tra lại bước cài đặt requirements.
-- Các model .pth hoặc thư mục Fine-tuned cần clone qua Git LFS. Nếu chưa cài:
+- Các model .pth hoặc thư mục Fine-tuned cần clone qua Git LFS(Nếu clone repo từ github). Nếu chưa cài:
 ```powershell
 git lfs install
 git lfs pull
