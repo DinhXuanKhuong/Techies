@@ -4,3 +4,5 @@ env38/
 .venv/
 .idea/
 *.pth
+!backend/*.pth
+!Model/*.pth
