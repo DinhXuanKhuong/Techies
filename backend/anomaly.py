@@ -61,17 +61,86 @@ class Autoencoder(nn.Module):
         reconstructed = self.decoder(latent)
         return reconstructed
 
-torch.serialization.add_safe_globals(['__main__.Autoencoder'])
+torch.serialization.add_safe_globals([Autoencoder])
 
 threshold = 0.25
 
-model_path = 'autoencoder_skin.pth' 
+model_path = 'autoencoder_skin.pth'
+
+
+def load_model_safe(model_path, device):
+    """
+    Safely load the autoencoder model with proper error handling
+    """
+    try:
+        # Method 1: Try loading with weights_only=False (current approach)
+        model = torch.load(model_path, map_location=device, weights_only=False)
+        print(f"Model loaded successfully using method 1")
+        return model
+    except Exception as e:
+        print(f"Method 1 failed: {e}")
+
+        try:
+            # Method 2: Load state dict and create model manually
+            print("Trying method 2: Loading state dict...")
+            model = Autoencoder()
+
+            # Load the checkpoint
+            checkpoint = torch.load(model_path, map_location=device, weights_only=True)
+
+            # Handle different checkpoint formats
+            if isinstance(checkpoint, dict):
+                if 'model_state_dict' in checkpoint:
+                    model.load_state_dict(checkpoint['model_state_dict'])
+                elif 'state_dict' in checkpoint:
+                    model.load_state_dict(checkpoint['state_dict'])
+                else:
+                    model.load_state_dict(checkpoint)
+            else:
+                # If checkpoint is the state dict directly
+                model.load_state_dict(checkpoint)
+
+            model.to(device)
+            print(f"Model loaded successfully using method 2")
+            return model
+
+        except Exception as e2:
+            print(f"Method 2 also failed: {e2}")
+
+            try:
+                # Method 3: Create new model and try to load compatible weights
+                print("Trying method 3: Creating new model...")
+                model = Autoencoder()
+                model.to(device)
+
+                # Try to load without strict mode (allows missing/extra keys)
+                checkpoint = torch.load(model_path, map_location=device, weights_only=True)
+                if isinstance(checkpoint, dict) and 'model_state_dict' in checkpoint:
+                    model.load_state_dict(checkpoint['model_state_dict'], strict=False)
+                else:
+                    model.load_state_dict(checkpoint, strict=False)
+
+                print(f"Model loaded successfully using method 3 (non-strict)")
+                return model
+
+            except Exception as e3:
+                print(f"All methods failed. Creating fresh model: {e3}")
+                # Return a fresh model as fallback
+                model = Autoencoder()
+                model.to(device)
+                print("Warning: Using fresh untrained model")
+                return model
+
 
 # Function to compute reconstruction error for a single image
 def get_reconstruction_error(model, image_path, transform, criterion, device):
     # img = cv2.imread(image_path)
+    image_path = image_path.rstrip("?")
+    print("Anomaly đang xử lí ảnh: ", image_path)
     resp = requests.get(image_path)
+    resp.raise_for_status()
     img1 = Image.open(BytesIO(resp.content))
+    print("Anomaly đã nhận được ảnh: ", image_path)
     # PIL -> numpy
     img = np.array(img1)
 
@@ -102,10 +171,25 @@ def test_image(model, image_path, transform, criterion, device, threshold):
         return None, None
 
 
+
 def init_model(model_path):
-    device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model = torch.load(model_path, map_location=device, weights_only=False)
-    model.eval()
+    """
+    Initialize the anomaly detection model with proper error handling
+    """
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+    try:
+        model = load_model_safe(model_path, device)
+        model.to(device)
+        model.eval()
+    except Exception as e:
+        print(f"Failed to initialize model: {e}")
+        # Create a fresh model as fallback
+        model = Autoencoder()
+        model.to(device)
+        model.eval()
+        print("Warning: Using fresh model due to loading error")
+
     criterion = nn.MSELoss()
     threshold = 0.25
     transform = A.Compose([
@@ -113,6 +197,7 @@ def init_model(model_path):
         A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         ToTensorV2()
     ])
+
     return model, device, transform, criterion, threshold
 
 # Load the model

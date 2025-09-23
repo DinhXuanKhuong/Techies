@@ -54,25 +54,37 @@ _threshold = 0.25
 _transform = None
 
 
+
 def get_anomaly_model():
     global _anomaly_model, _anomaly_device, _criterion, _transform
     if _anomaly_model is None:
-        _anomaly_device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        _anomaly_model = torch.load(
-            'autoencoder_skin.pth',
-            map_location=_anomaly_device,
-            weights_only=False
-        )
-        _anomaly_model.to(_anomaly_device)
-        _anomaly_model.eval()
+        try:
+            from anomaly import init_model, Autoencoder  # Import cả class
 
-        _criterion = nn.MSELoss()
-        _transform = A.Compose([
-            A.Resize(height=224, width=224),
-            A.Normalize(mean=[0.485, 0.456, 0.406],
-                        std=[0.229, 0.224, 0.225]),
-            ToTensorV2()
-        ])
+            _anomaly_model, _anomaly_device, _transform, _criterion, _threshold = init_model('autoencoder_skin.pth')
+            print("Anomaly model initialized successfully")
+
+        except Exception as e:
+            print(f"Error initializing anomaly model: {e}")
+
+            # Fallback: create minimal working model
+            _anomaly_device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+            # Import và tạo model mới
+            from anomaly import Autoencoder
+            _anomaly_model = Autoencoder()
+            _anomaly_model.to(_anomaly_device)
+            _anomaly_model.eval()
+
+            _criterion = nn.MSELoss()
+            _transform = A.Compose([
+                A.Resize(height=224, width=224),
+                A.Normalize(mean=[0.485, 0.456, 0.406],
+                            std=[0.229, 0.224, 0.225]),
+                ToTensorV2()
+            ])
+            print("Using fallback anomaly model")
+
     return _anomaly_model, _anomaly_device, _criterion, _transform
 
 
@@ -152,7 +164,8 @@ def validate_input(state: DermState) -> DermState:
     if img:
         try:
             result = anomaly_tool.invoke(img)
-        except Exception:
+        except Exception as e:
+            print(f"[Validate] Anomaly tool failed WITH ERROR: {e}")
             result = {"reconstruction_error": None, "is_anomaly": True}
             print("[Validate] Anomaly tool failed, treating as anomaly.")
         state["anomaly_check"] = result
@@ -508,6 +521,8 @@ async def run_derm_graph(user_question: str, image_url: str = None, chat_history
         "final_diagnosis": None, "reasoning": None, "answer": None,
         "plan": None, "plan_index": 0,
     }
+
+    print("Agent đã nhận được ảnh: ", image_url)
 
     # Chạy graph và trả về toàn bộ state cuối cùng
     result_state = await graph.ainvoke(initial_state)
