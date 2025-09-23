@@ -1,0 +1,25 @@
+services:
+  backend:
+    build: ./backend
+    container_name: fastapi_app
+    ports:
+      - "8000:8000"
+    volumes:
+      # mount code để auto reload khi dev
+      - ./backend:/app
+    env_file:
+      - ./backend/.env
+
+  frontend:
+    build: ./frontend
+    container_name: nextjs_app
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      # bỏ qua node_modules trong máy thật, xài node_modules trong container
+      - /app/node_modules
+    env_file:
+      - ./frontend/.env.local
+    depends_on:
+      - backend

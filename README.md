@@ -1,51 +1,62 @@
-# Techies
+# Techies - AI Dermatology Assistant
 
-## Hướng dẫn cài đặt và chạy chương trình
+Ứng dụng AI hỗ trợ chẩn đoán bệnh da liễu với FastAPI backend và Next.js frontend.
+
+## 🚀 Chạy với Docker 
 
 ### Yêu cầu
-Python ≥ 3.10.x (cho backend)
+- **Docker Desktop** hoặc **Docker Engine** + **Docker Compose**
+- Git (để clone repository nếu có sẵn project folder thì khỏi)
+- Git LFS (nếu clone từ GitHub)
 
-Node.js ≥ 18.x + npm (cho frontend)
+### Các bước chi tiết
 
-Git LFS (nếu clone repo từ github)
-### 1. Tạo môi trường ảo (Windows)
-
-Mở PowerShell hoặc Command Prompt và chạy lệnh sau:
-
-```powershell
-python -m venv env
+1. **Di chuyển vào thư mục dự án**
+```bash
+cd techies
+# Hoặc tên thư mục dự án của bạn
 ```
 
-### 2. Kích hoạt môi trường ảo
-
-```cmd
-.\.venv\Scripts\activate
-(Linux/macOS thì dùng: source .venv/bin/activate)
+2. **Kiểm tra file docker-compose.yml tồn tại**
+```bash
+ls docker-compose.yml
+# Phải thấy file docker-compose.yml
 ```
 
-### 3. Cài đặt các thư viện Python cần thiết
-
-```powershell
-pip install -r requirements.txt
+3. **Chạy ứng dụng**
+```bash
+docker compose up --build
 ```
 
-### 4. Cấu hình biến môi trường(Nếu clone repo qua Github hoặc chưa có sẵn các file .env và .env.local)
+**Giải thích các flag:**
+- `up`: Khởi động containers
+- `--build`: Build lại images (bắt buộc lần đầu hoặc khi có thay đổi code)
 
-Chương trình cần các biến môi trường để kết nối với dịch vụ bên ngoài.  
-Repo có sẵn các file mẫu:  
+### Truy cập ứng dụng
+- **Frontend (Web UI)**: http://localhost:3000
 
-- `backend/.env.example`
-- `frontend/.env.local.example`
 
-#### Backend
-Trong thư mục `backend`, tạo file `.env` dựa trên `.env.example`:  
-
-```powershell
-cd backend
-cp .env.example .env
+### Dừng ứng dụng
+```bash
+# Cách 1: Nhấn Ctrl+C trong terminal đang chạy
+# Cách 2: Từ terminal khác trong cùng thư mục:
+docker compose down
 ```
-Nội dung tối thiểu của .env
-```powershell
+
+### ⚠️ Lưu ý quan trọng
+- **Phải chạy lệnh trong thư mục chứa file `docker-compose.yml`**
+- Nếu có nhiều Docker projects khác, đảm bảo đang ở đúng thư mục
+- Kiểm tra port 3000 và 8000 không bị chiếm bởi ứng dụng khác
+
+---
+
+## ⚙️ Cấu hình biến môi trường(nếu clone từ github, còn có sẵn project folder thì khỏi cần)
+
+Ứng dụng cần các biến môi trường để kết nối với dịch vụ bên ngoài.
+
+### Backend Environment
+Tạo file `backend/.env` với nội dung:
+```env
 SUPABASE_URL=your_supabase_url
 SUPABASE_KEY=your_supabase_key
 OPENAI_KEY=your_openai_key
@@ -55,40 +66,134 @@ LANGCHAIN_TRACING_V2=true
 LANGCHAIN_PROJECT=derm-agent
 ```
 
-
-#### Frontend 
-Trong thư mục `frontend`, tạo file `.env.local` dựa trên `.env.local.example`:
-
-```powershell
-cd frontend
-cp .env.local.example .env.local
-```
-Nội dung tối thiểu của .env
-```powershell
+### Frontend Environment  
+Tạo file `frontend/.env.local` với nội dung:
+```env
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key
 ```
-### 5. Chạy chương trình backend
 
-```powershell
-cd backend
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
-
-```
-
+**Lưu ý**: Các file `.env.example` và `.env.local.example` có sẵn để tham khảo.
 
 ---
-### 6. Chạy web frontend 
 
-```powershell
-cd frontend
+## 🛠️ Development Mode (Tùy chọn)
+
+Nếu muốn chạy trực tiếp mà không dùng Docker:
+
+### Yêu cầu
+- Python ≥ 3.10
+- Node.js ≥ 18 + npm
+
+### Backend
+```bash
+cd backend
+python -m venv .venv
+source .venv/bin/activate  # Linux/macOS
+# .\.venv\Scripts\activate  # Windows
+pip install -r requirements.txt
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+```
+
+### Frontend
+```bash
+cd frontend  
 npm install
 npm run dev
 ```
-**Lưu ý:**
 
-- Nếu gặp lỗi thiếu thư viện, kiểm tra lại bước cài đặt requirements.
-- Các model .pth hoặc thư mục Fine-tuned cần clone qua Git LFS(Nếu clone repo từ github). Nếu chưa cài:
-```powershell
+---
+
+## 📁 Cấu trúc dự án
+
+```
+techies/
+├── docker-compose.yml
+├── backend/
+│   ├── Dockerfile
+│   ├── requirements.txt
+│   ├── .env.example
+│   └── main.py
+├── frontend/
+│   ├── Dockerfile
+│   ├── package.json
+│   ├── .env.local.example
+│   └── ...
+└── README.md
+```
+
+---
+
+## 🔧 Troubleshooting
+
+### Lỗi thường gặp
+
+**"No such file or directory: docker-compose.yml"**
+```bash
+# Kiểm tra bạn đang ở đúng thư mục
+pwd
+ls -la
+# Phải thấy file docker-compose.yml
+```
+
+**Port đã được sử dụng (port 3000 hoặc 8000):**
+```bash
+# Dừng containers hiện tại
+docker compose down
+
+# Xem process nào đang dùng port
+lsof -i :3000  # Linux/macOS
+netstat -ano | findstr :3000  # Windows
+
+# Hoặc thay đổi port trong docker-compose.yml
+```
+
+**Lỗi "Cannot connect to Docker daemon":**
+```bash
+# Đảm bảo Docker Desktop đang chạy
+# Hoặc start Docker service trên Linux
+sudo systemctl start docker
+```
+
+**Rebuild sau khi thay đổi code:**
+```bash
+docker compose down
+docker compose up --build
+```
+
+**Xóa toàn bộ containers và images (reset hoàn toàn):**
+```bash
+docker compose down
+docker system prune -a
+# Cảnh báo: Lệnh này xóa TẤT CẢ images/containers không sử dụng
+```
+
+### Model Files (Git LFS)
+Nếu clone từ GitHub và gặp lỗi thiếu model:
+```bash
 git lfs install
 git lfs pull
+```
+
+---
+
+## 📊 Tech Stack
+
+- **Backend**: FastAPI, Python 3.12, LangChain, OpenAI/Groq
+- **Frontend**: Next.js 15, React, TypeScript  
+- **Database**: Supabase
+- **Container**: Docker + Docker Compose
+- **AI/ML**: OpenCV, Albumentations, PyTorch
+
+---
+
+## 👥 Đóng góp
+
+1. Fork repository
+2. Tạo feature branch
+3. Commit changes
+4. Push và tạo Pull Request
+
+## 📄 License
+
+MIT License - xem file LICENSE để biết thêm chi tiết.
