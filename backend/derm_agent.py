@@ -341,9 +341,14 @@ def symptom_matching(state: DermState) -> DermState:
         init_query = state.get("symptoms") or state.get("user_input")
         query = str(init_query)  # Chuyển thành chuỗi
         if state.get('cv_results'):
+            cv_result = state.get('cv_results')
             # Thay vì cộng chuỗi, chúng ta có thể làm query phức tạp hơn sau này
             # Nhưng hiện tại, chỉ cần query gốc là đủ tốt
-            pass
+            max_key = max(cv_result, key=cv_result.get)
+            # Lấy value lớn nhất
+            max_value = cv_result[max_key]
+            query += f" Có thể là'{max_key}'."
+
 
         # Chỉ cần gọi tool với query
         state["rag_docs"] = knowledge_retrieval_tool.invoke(query)
